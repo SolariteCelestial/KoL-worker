@@ -1,3 +1,6 @@
+// Kingdom of Loathing Reverse Proxy — Cloudflare Worker
+// Deploy: Cloudflare dashboard > Workers & Pages > Create > paste this in > Deploy
+
 const TARGET_HOST = "www.kingdomofloathing.com";
 
 function isAllowedHost(host) {
@@ -15,6 +18,8 @@ function toProxyPath(workerOrigin, host, path) {
   return `${workerOrigin}/_/${host}${path || "/"}`;
 }
 
+// FIX: factory function instead of module-level /gi regex — avoids shared
+// lastIndex state that caused every other rewrite to silently skip.
 function hostUrlRe() {
   return /(https?:)?\/\/((?:[a-z0-9-]+\.)*kingdomofloathing\.com)((?:\/[^\s"'<>)]*)?)/gi;
 }
@@ -31,6 +36,10 @@ function rewriteTextContent(text, workerOrigin) {
   });
 }
 
+// Wiki traffic gets routed to Fred's own separate wiki proxy instead of
+// being handled directly by this worker. WIKI_PROXY_ORIGIN is assumed to
+// take the same path/query/hash directly at its root (no /_/host/ wrapper) —
+// adjust here if little-night actually expects a different URL shape.
 const WIKI_HOST = "wiki.kingdomofloathing.com";
 const WIKI_PROXY_ORIGIN = "https://little-night-cf03.SolariteCelestial.workers.dev";
 
@@ -152,6 +161,7 @@ function injectionScript(workerOrigin) {
   var OrigWS = window.WebSocket;
   if (OrigWS) {
     window.WebSocket = function(url, protocols){
+      // FIX: was .replace(/^http/, "ws") which left ws:// unchanged; now always wss:
       var p = proxify(url).replace(/^wss?:/, "wss:");
       return protocols ? new OrigWS(p, protocols) : new OrigWS(p);
     };
@@ -554,6 +564,16 @@ function submitChoice(whichchoice, option, pwd, cookie, request) {
   });
 }
 
+// Extracts each option's number, label, and the whichchoice value FROM THE SAME
+// <form> that carries it — scoped per-form so nothing can cross-match between
+// options, and so whichchoice is read the exact same reliable way as option is.
+//
+// FIX: KoL emits unquoted attributes as `name=whichchoice value=1308` (a space,
+// not "="), not `whichchoice=1308`. The previous extraction looked for a literal
+// "whichchoice=" substring, which never appears in the real markup, so
+// whichchoice always came back null — that's why every pick showed "could not
+// identify this choice" and had to be re-asked every time. name=X value=Y is
+// the actual pattern KoL uses for every hidden input, including this one.
 function parseChoiceForms(body) {
   const forms = body.match(/<form\b[^>]*>[\s\S]*?<\/form>/gi) || [];
   const results = [];
@@ -571,6 +591,8 @@ function parseChoiceForms(body) {
   return results;
 }
 
+// A composite key, not just whichchoice — see the note in resolveChoiceChain
+// on why whichchoice alone isn't a safe memoization key.
 function choiceKey(whichchoice, options) {
   if (!whichchoice) return null;
   const fingerprint = options.map((o) => (o.label || o.option || "").trim()).sort().join("~");
@@ -587,16 +609,34 @@ async function resolveChoiceChain(res, cookie, pwd, request, knownChoices) {
     const body = await current.text();
     const forms = parseChoiceForms(body);
 
+    // FIX: an "empty" choice.php page — no option= forms detected at all — is
+    // not a real choice prompt to resolve or ask about. This was showing up
+    // right after a saved choice successfully resolved: the game sometimes
+    // routes through a transitional/summary choice.php page with no actual
+    // option form on it before landing on the next real page. Previously this
+    // fell through to `unknownChoice` with an empty options array, which is
+    // exactly the "picker with nothing in it" bug — the saved choice had
+    // already worked, there was just nothing left to pick. Treat a formless
+    // page as a normal completed step and keep going instead of stopping.
     if (!forms.length) return { kind: "normal" };
 
     let whichchoice = new URL(finalUrl).searchParams.get("whichchoice");
     if (!whichchoice && forms.length) {
+      // All option forms on one choice page should agree — take whichever
+      // value is most common, as a hedge against any one stray form.
       const counts = {};
       for (const f of forms) if (f.whichchoice) counts[f.whichchoice] = (counts[f.whichchoice] || 0) + 1;
       const ranked = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
       if (ranked.length) whichchoice = ranked[0];
     }
     const options = forms.map((f) => ({ option: f.option, label: f.label }));
+    // FIX: KoL can reuse the SAME whichchoice for multiple distinct steps of one
+    // choice chain — confirmed from real pages: the monorail station picker and
+    // its "Factory District" follow-up (a completely different set of options)
+    // are both whichchoice=1308. Keying memory by whichchoice alone made every
+    // remembered pick apply to BOTH steps interchangeably, which is why a saved
+    // choice kept getting re-asked. Fold the option labels into the key so each
+    // distinct step gets its own memory slot.
     const key = choiceKey(whichchoice, options);
     if (key && Object.prototype.hasOwnProperty.call(knownChoices, key)) {
       current = await submitChoice(whichchoice, knownChoices[key], pwd, cookie, request);
@@ -644,6 +684,13 @@ async function resolveFight(fightUrl, cookie, pwd, macroId, request) {
   };
 }
 
+// Spleen has no visible counter anywhere in KoL's own UI — confirmed on the
+// wiki's Spleen page, and deliberately so per Jick. The documented way to
+// read it is api.php?what=status, which is what KoLmafia and other tools
+// use — far more reliable than scraping HTML the way choice.php forced us
+// to. Field names aren't verified against a live response, so this tries a
+// few plausible spellings and, if none hit, hands back the raw payload
+// instead of failing silently — same lesson as the choice-picker saga.
 async function fetchCharacterStatus(cookie, request) {
   const res = await fetch("https://www.kingdomofloathing.com/api.php?what=status&for=kol-proxy-worker", {
     headers: kolAutomationHeaders(request, cookie),
@@ -677,6 +724,7 @@ async function handleSpleenStatus(request) {
   return jsonResponse({ found: true, used, cap });
 }
 
+// FIX: try charpane.php first — it reliably has pwd=; main.php is a frameset
 async function fetchPwd(cookie, request) {
   for (const path of ["charpane.php", "main.php"]) {
     const res = await fetch(`https://www.kingdomofloathing.com/${path}`, {
@@ -699,6 +747,7 @@ function extractKolTarget(pastedUrl) {
 
 function withPwd(targetUrl, pwd) {
   const u = new URL(targetUrl);
+  // FIX: always overwrite pwd — stale baked-in values must not be used
   u.searchParams.set("pwd", pwd);
   return u.toString();
 }
@@ -796,7 +845,19 @@ async function runAutoAdventureBatchCore(request, url) {
   return jsonResponse({ completed, remaining: turnsRequested - completed, stopped, reason, unknownChoice, log });
 }
 
-const KV_SEED_KEY = "2030494496527";
+// ── SNAPSHOT DATA (KV SEEDING) ─────────────────────────────────────────────────
+//
+// Loads the av-snapshot reference tables (food, booze, familiars, skills,
+// etc.) into a KV namespace, entirely from Safari — no wrangler, no local
+// script. Requires a KV namespace bound to this worker as SNAPSHOT_DATA
+// (Cloudflare dashboard: your worker > Settings > Bindings > add a KV
+// namespace binding named exactly SNAPSHOT_DATA).
+//
+// Also requires an encrypted environment variable named KV_SEED_KEY (same
+// Settings > Bindings screen > add variable > mark it "Encrypt") — this is
+// the only thing standing between the public internet and overwriting your
+// reference data, so it lives as a secret binding rather than a literal in
+// the source.
 
 const KV_SEED_CATEGORIES = [
   "food", "booze", "familiars", "skills", "trophies", "tattoos",
@@ -833,7 +894,7 @@ const KV_SEED_HTML = `<!doctype html>
   <p class="sub">Upload each av-snapshot .txt file into KV, one at a time. Safe to re-run — re-uploading a category overwrites it.</p>
 
   <label for="key">Seed key</label>
-  <input type="password" id="key" placeholder="matches KV_SEED_KEY in the worker source">
+  <input type="password" id="key" placeholder="matches the KV_SEED_KEY environment variable">
 
   <label for="category">Category</label>
   <select id="category">
@@ -899,10 +960,10 @@ async function handleKvSeed(request, env, rawCategory) {
   }
   const url = new URL(request.url);
   const key = url.searchParams.get("key") || "";
-  if (!KV_SEED_KEY || KV_SEED_KEY === "changeme") {
-    return jsonResponse({ error: "KV_SEED_KEY is still the default in the worker source — set a real value before using this" }, 500);
+  if (!env.KV_SEED_KEY) {
+    return jsonResponse({ error: "no KV_SEED_KEY environment variable set on this worker — add one (encrypted) in the dashboard first" }, 500);
   }
-  if (key !== KV_SEED_KEY) {
+  if (key !== env.KV_SEED_KEY) {
     return jsonResponse({ error: "wrong key" }, 403);
   }
   const category = safeCategoryName(rawCategory);
@@ -920,6 +981,13 @@ async function handleKvSeed(request, env, rawCategory) {
   return jsonResponse({ ok: true, category, rows: rows.length });
 }
 
+// ── SNAPSHOT: FAMILIARS ─────────────────────────────────────────────────────
+//
+// Ownership detection verified against KoLmafia's own FamiliarData.java
+// (FAMILIAR_PATTERN) and a real familiar.php fixture from its test suite —
+// every owned familiar's terrarium row contains name=newfam value=<id>, and
+// unowned familiars don't appear on the page at all, so a simple global
+// match for that pattern is a clean, unambiguous ownership signal.
 async function fetchOwnedFamiliarIds(cookie, request) {
   const res = await fetch("https://www.kingdomofloathing.com/familiar.php", {
     headers: kolAutomationHeaders(request, cookie),
@@ -965,6 +1033,17 @@ async function handleSnapshotFamiliars(request, env) {
   return jsonResponse({ ownedCount: owned.length, totalCount: rows.length, owned });
 }
 
+// ── SNAPSHOT: GENERIC SUBSTRING-MATCH CATEGORIES ────────────────────────────
+//
+// Trophies, tattoos, food/booze, discoveries, and hobo codes all boil down to
+// the same shape once verified: fetch one or two pages, then for each KV row
+// check whether some substring derived from that row appears in the fetched
+// HTML. The exact substring and which page(s) to fetch come straight from
+// av-snapshot's own working ash script (check_trophies, tattoo_check,
+// has_consumed, is_discovered, the hobo-codes block in check_levels) — not
+// guessed. Skills is the one exception (three ownership levels, not a plain
+// boolean), so it gets its own function below.
+
 async function fetchConcatPages(pageUrls, cookie, request) {
   const texts = await Promise.all(
     pageUrls.map(async (u) => {
@@ -1008,19 +1087,24 @@ async function buildSubstringSnapshot(request, env, config) {
   return jsonResponse({ ownedCount: owned.length, totalCount: rows.length, owned });
 }
 
+// Category configs. Column indices and match logic verified against
+// av-snapshot.ash; see the comments in each function this was pulled from.
 const SNAPSHOT_CATEGORIES = {
+  // check_trophies: is_in("/" + itemname, html) on trophies.php. Column 1 = image key, column 2 = display name.
   trophies: {
     pageUrls: ["https://www.kingdomofloathing.com/trophies.php"],
     kvKey: "data:trophies",
     nameIdx: 2,
     matchFn: (row, html) => html.includes("/" + row[1]),
   },
+  // tattoo_check: last_index_of(html, "/" + gif + ".gif") on account_tattoos.php. Column 2 = gif key, column 1 = short label.
   tattoos: {
     pageUrls: ["https://www.kingdomofloathing.com/account_tattoos.php"],
     kvKey: "data:tattoos",
     nameIdx: 1,
     matchFn: (row, html) => html.includes("/" + row[2] + ".gif"),
   },
+  // has_consumed: lowercased showconsumption.php, match ">name</a>" (name also lowercased). Column 1 = item name.
   food: {
     pageUrls: ["https://www.kingdomofloathing.com/showconsumption.php"],
     kvKey: "data:food",
@@ -1035,6 +1119,8 @@ const SNAPSHOT_CATEGORIES = {
     nameIdx: 1,
     matchFn: (row, html) => html.includes(">" + (row[1] || "").toLowerCase() + "</a>"),
   },
+  // is_discovered fallback case: ">name<" on craft.php?mode=discoveries&what=X. Column 1 = item name.
+  // (Skips the rare per-item regex override column — every sampled data row had it empty.)
   "disc-cocktail": {
     pageUrls: ["https://www.kingdomofloathing.com/craft.php?mode=discoveries&what=cocktail"],
     kvKey: "data:disc-cocktail",
@@ -1065,6 +1151,7 @@ const SNAPSHOT_CATEGORIES = {
     nameIdx: 1,
     matchFn: (row, html) => html.includes(">" + row[1] + "<"),
   },
+  // check_levels hobo-codes block: is_in(itemname, html) on questlog.php?which=5. Column 1 = code text.
   hobocodes: {
     pageUrls: ["https://www.kingdomofloathing.com/questlog.php?which=5"],
     kvKey: "data:hobocodes",
@@ -1079,6 +1166,13 @@ async function handleSnapshotCategory(request, env, category) {
   return buildSubstringSnapshot(request, env, config);
 }
 
+// ── SNAPSHOT: SKILLS (three levels, not a plain boolean) ────────────────────
+//
+// skillLevel(): checks charsheet.php + the bookshelf page for
+// ">name</a> (<b>HP</b>)" (hardcore permed, level 2), ">name</a> (P)" (permed,
+// level 1), or bare ">name</a>" (have it unpermed, level 1 here too — this
+// collapses ash's HP-only distinction slightly for a simpler owned/permed
+// summary rather than replicating hardcore-vs-normal permanence).
 async function handleSnapshotSkills(request, env) {
   const cookie = request.headers.get("Cookie") || "";
   if (!cookie) return jsonResponse({ error: "no session cookie on this request" }, 400);
@@ -1229,6 +1323,8 @@ function snapshotPageHtml(title, endpoint) {
 </html>`;
 }
 
+// ── STANDALONE AUTO-ADVENTURE PAGE ────────────────────────────────────────────
+
 const AUTO_ADVENTURE_HTML = `<!doctype html>
 <html lang="en">
 <head>
@@ -1318,6 +1414,8 @@ const AUTO_ADVENTURE_HTML = `<!doctype html>
 </body>
 </html>`;
 
+// ── MAIN EXPORT ───────────────────────────────────────────────────────────────
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -1377,6 +1475,7 @@ export default {
     outHeaders.set("Origin", `https://${targetHost}`);
     outHeaders.delete("cf-connecting-ip");
 
+    // FIX: removed duplex:"half" — not supported in Cloudflare Workers, causes 1101
     const init = { method: request.method, headers: outHeaders, redirect: "manual" };
     if (!["GET", "HEAD"].includes(request.method)) init.body = request.body;
 
@@ -1409,12 +1508,8 @@ export default {
     respHeaders.delete("x-frame-options");
     respHeaders.delete("content-security-policy");
     respHeaders.delete("content-security-policy-report-only");
-    respHeaders.delete("cross-origin-opener-policy");
-    respHeaders.delete("cross-origin-embedder-policy");
-    respHeaders.delete("cross-origin-resource-policy");
     respHeaders.delete("content-encoding");
     respHeaders.delete("content-length");
-    respHeaders.set("access-control-allow-origin", "*");
 
     const cookies =
       typeof response.headers.getAll === "function"
@@ -1424,7 +1519,6 @@ export default {
       respHeaders.delete("set-cookie");
       for (let cookie of cookies) {
         cookie = cookie.replace(/;\s*domain=[^;]*/gi, "");
-        cookie = cookie.replace(/;\s*secure/gi, "");
         cookie = cookie.replace(/;\s*samesite=[^;]*/gi, "; SameSite=Lax");
         cookie = cookie.replace(/;\s*path=[^;]*/gi, "");
         cookie += "; Path=/";
