@@ -250,6 +250,15 @@ function autoAdventurePanelScript() {
   background: none; border: none; color: #8b93a1; font-size: 14px; cursor: pointer; padding: 2px 6px; line-height: 1;
 }
 #kol-aa-spleen-refresh:active { color: #6fce8f; }
+#kol-aa-loc-results { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.kol-aa-loc-item {
+  display: flex; justify-content: space-between; align-items: baseline; width: 100%;
+  text-align: left; padding: 8px 10px; border-radius: 6px; border: 1px solid #2a2f38;
+  background: #1b1f26; color: #e6e9ef; font-size: 13px; font-weight: 500; cursor: pointer;
+}
+.kol-aa-loc-item:active { border-color: #6fce8f; background: #22262e; }
+.kol-aa-loc-item span.kol-aa-loc-num { color: #8b93a1; font-size: 11px; font-weight: 400; margin-left: 8px; white-space: nowrap; }
+.kol-aa-loc-empty { font-size: 12px; color: #8b93a1; padding: 4px 2px; }
 </style>
 <script>(function(){
   if (window.self !== window.top) return;
@@ -277,6 +286,9 @@ function autoAdventurePanelScript() {
     panel.innerHTML =
       '<h1>AUTO-ADVENTURE<button id="kol-aa-close">&times;</button></h1>' +
       '<div id="kol-aa-spleen"><span>Spleen: <span id="kol-aa-spleen-val">&mdash;</span></span><button type="button" id="kol-aa-spleen-refresh" title="Refresh">&#8635;</button></div>' +
+      '<label for="kol-aa-loc-search">Search for a location</label>' +
+      '<input id="kol-aa-loc-search" placeholder="e.g. a-boo peak" autocomplete="off">' +
+      '<div id="kol-aa-loc-results"></div>' +
       '<label for="kol-aa-target">Adventure link</label>' +
       '<input id="kol-aa-target" placeholder="paste the adventure.php link">' +
       '<div id="kol-aa-row">' +
@@ -307,6 +319,8 @@ function autoAdventurePanelScript() {
     var resetEl = panel.querySelector('#kol-aa-reset');
     var spleenValEl = panel.querySelector('#kol-aa-spleen-val');
     var spleenRefreshBtn = panel.querySelector('#kol-aa-spleen-refresh');
+    var locSearchEl = panel.querySelector('#kol-aa-loc-search');
+    var locResultsEl = panel.querySelector('#kol-aa-loc-results');
     choiceEl.style.display = 'none';
 
     if (saved.target) targetEl.value = saved.target;
@@ -386,16 +400,78 @@ function autoAdventurePanelScript() {
 
     spleenRefreshBtn.addEventListener('click', refreshSpleen);
 
+    // FIX: this function was missing entirely in the previous version — it's
+    // called from start() (setRunning(true, ...), setRunning(false)) but had
+    // no definition anywhere in the file. Since start() is async, calling an
+    // undefined function threw a ReferenceError synchronously, before the
+    // outer try/catch below even began, which just silently rejected start()'s
+    // promise with nothing to catch it. That's why the panel would log
+    // "Starting: N turns" and then do nothing forever — execution died right
+    // there, before the fetch, before the timeout, before the button
+    // re-enable at the end. Restoring this fixes that hang.
     function setRunning(running, label){
       tab.classList.toggle('kol-aa-running', running);
       tab.textContent = running ? (label || 'RUNNING') : 'AUTO-ADV';
     }
+
+    // ── Location search (name -> snarfblat, resolved via the wiki) ──────────
+    var locSearchToken = 0;
+    var locSearchTimer = null;
 
     function escapeHtml(s){
       return String(s).replace(/[&<>"']/g, function(c){
         return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
       });
     }
+
+    function renderLocationResults(items){
+      locResultsEl.innerHTML = '';
+      items.forEach(function(item){
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'kol-aa-loc-item';
+        btn.innerHTML = '<span>' + escapeHtml(item.name) + '</span><span class="kol-aa-loc-num">#' + escapeHtml(item.snarfblat) + '</span>';
+        btn.addEventListener('click', function(){
+          // Use the fully-proxied form (same shape you'd normally paste in) rather than
+          // the bare kingdomofloathing.com URL, even though extractKolTarget() on the
+          // backend accepts either — matching what you'd expect to see here removes any
+          // doubt about whether the link is "really" going through the proxy.
+          targetEl.value = window.location.origin + '/_/www.kingdomofloathing.com/adventure.php?snarfblat=' + encodeURIComponent(item.snarfblat);
+          persist();
+          locResultsEl.innerHTML = '';
+          locSearchEl.value = item.name;
+        });
+        locResultsEl.appendChild(btn);
+      });
+    }
+
+    async function runLocationSearch(q){
+      var token = ++locSearchToken;
+      var data;
+      try {
+        var res = await fetch('/kol-locations/search?q=' + encodeURIComponent(q));
+        var raw = await res.text();
+        try { data = JSON.parse(raw); } catch (e2) {
+          if (token === locSearchToken) locResultsEl.innerHTML = '<div class="kol-aa-loc-empty">Unexpected response (HTTP ' + res.status + ')</div>';
+          return;
+        }
+      } catch (e) {
+        if (token === locSearchToken) locResultsEl.innerHTML = '<div class="kol-aa-loc-empty">Search error: ' + escapeHtml(e.message) + '</div>';
+        return;
+      }
+      if (token !== locSearchToken) return; // a newer keystroke already superseded this search
+      if (data.error) { locResultsEl.innerHTML = '<div class="kol-aa-loc-empty">' + escapeHtml(data.error) + '</div>'; return; }
+      if (!data.results || !data.results.length) { locResultsEl.innerHTML = '<div class="kol-aa-loc-empty">No matching locations.</div>'; return; }
+      renderLocationResults(data.results);
+    }
+
+    locSearchEl.addEventListener('input', function(){
+      var q = locSearchEl.value.trim();
+      clearTimeout(locSearchTimer);
+      locSearchToken++; // invalidate any in-flight search immediately, even before the debounced one fires
+      if (!q) { locResultsEl.innerHTML = ''; return; }
+      locSearchTimer = setTimeout(function(){ runLocationSearch(q); }, 250);
+    });
 
     function showChoicePicker(info){
       return new Promise(function(resolve, reject){
@@ -467,60 +543,81 @@ function autoAdventurePanelScript() {
       var totalRequested = turns;
       var pendingResolve = null;
 
-      while (turns > 0 && !stopRequested) {
-        var params = new URLSearchParams({ target: target, turns: String(turns) });
-        if (macroId) params.set('macroId', macroId);
-        params.set('choices', JSON.stringify(choices));
-        if (pendingResolve) {
-          if (pendingResolve.whichchoice) params.set('resolveChoice', pendingResolve.whichchoice);
-          params.set('resolveOption', pendingResolve.option);
-          pendingResolve = null;
-        }
+      // FIX: everything below used to be able to throw or hang without ever
+      // reaching a catch block — e.g. a request that never resolves, or a
+      // response missing the expected log array — which left the panel
+      // stuck on "Starting" forever, Start button disabled, with no error
+      // visible anywhere. Wrapping the whole loop in try/catch, adding a
+      // timeout to the fetch itself, and validating the response shape
+      // before using it means any failure now shows up as a log line
+      // instead of failing silently.
+      try {
+        while (turns > 0 && !stopRequested) {
+          var params = new URLSearchParams({ target: target, turns: String(turns) });
+          if (macroId) params.set('macroId', macroId);
+          params.set('choices', JSON.stringify(choices));
+          if (pendingResolve) {
+            if (pendingResolve.whichchoice) params.set('resolveChoice', pendingResolve.whichchoice);
+            params.set('resolveOption', pendingResolve.option);
+            pendingResolve = null;
+          }
 
-        var data;
-        try {
-          var res = await fetch('/auto-adventure/run?' + params.toString());
-          var raw = await res.text();
+          var data;
+          var controller = new AbortController();
+          var timedOut = false;
+          var timeoutId = setTimeout(function(){ timedOut = true; controller.abort(); }, 25000);
           try {
-            data = JSON.parse(raw);
-          } catch (e2) {
-            addLog('Error: unexpected response (HTTP ' + res.status + '): ' + raw.slice(0, 200), 'kol-aa-err');
+            var res = await fetch('/auto-adventure/run?' + params.toString(), { signal: controller.signal });
+            var raw = await res.text();
+            try {
+              data = JSON.parse(raw);
+            } catch (e2) {
+              addLog('Error: unexpected response (HTTP ' + res.status + '): ' + raw.slice(0, 200), 'kol-aa-err');
+              break;
+            }
+          } catch (e) {
+            addLog('Error: ' + (timedOut ? 'request timed out after 25s with no response — the worker itself may be hanging' : e.message), 'kol-aa-err');
+            break;
+          } finally {
+            clearTimeout(timeoutId);
+          }
+          if (data.error) { addLog('Error: ' + data.error, 'kol-aa-err'); break; }
+          if (!data.log || !Array.isArray(data.log)) {
+            addLog('Error: response was missing the expected log data — raw: ' + JSON.stringify(data).slice(0, 200), 'kol-aa-err');
             break;
           }
-        } catch (e) {
-          addLog('Error: ' + e.message, 'kol-aa-err');
-          break;
-        }
-        if (data.error) { addLog('Error: ' + data.error, 'kol-aa-err'); break; }
 
-        data.log.forEach(function(line){ addLog(line); });
-        totalDone += data.completed;
-        turns = data.remaining;
-        statusEl.textContent = totalDone + ' done, ' + turns + ' left';
-        setRunning(true, totalDone + '/' + totalRequested);
+          data.log.forEach(function(line){ addLog(line); });
+          totalDone += data.completed;
+          turns = data.remaining;
+          statusEl.textContent = totalDone + ' done, ' + turns + ' left';
+          setRunning(true, totalDone + '/' + totalRequested);
 
-        if (data.unknownChoice) {
-          setRunning(true, 'PICK?');
-          setOpen(true);
-          var picked;
-          try {
-            picked = await showChoicePicker(data.unknownChoice);
-          } catch (e3) {
-            addLog('Error showing the choice picker: ' + e3.message, 'kol-aa-err');
-            break;
+          if (data.unknownChoice) {
+            setRunning(true, 'PICK?');
+            setOpen(true);
+            var picked;
+            try {
+              picked = await showChoicePicker(data.unknownChoice);
+            } catch (e3) {
+              addLog('Error showing the choice picker: ' + e3.message, 'kol-aa-err');
+              break;
+            }
+            if (data.unknownChoice.key) {
+              choices[data.unknownChoice.key] = picked;
+              saveChoices();
+              addLog('Saved: choice ' + (data.unknownChoice.whichchoice || '?') + ' -> option ' + picked + ' (remembered for next time)');
+            } else {
+              addLog('Picked option ' + picked + ' — could not identify this choice, so it will ask again next time.');
+            }
+            pendingResolve = { whichchoice: data.unknownChoice.whichchoice, option: picked };
+            continue;
           }
-          if (data.unknownChoice.key) {
-            choices[data.unknownChoice.key] = picked;
-            saveChoices();
-            addLog('Saved: choice ' + (data.unknownChoice.whichchoice || '?') + ' -> option ' + picked + ' (remembered for next time)');
-          } else {
-            addLog('Picked option ' + picked + ' — could not identify this choice, so it will ask again next time.');
-          }
-          pendingResolve = { whichchoice: data.unknownChoice.whichchoice, option: picked };
-          continue;
-        }
 
-        if (data.stopped) { addLog('Stopped: ' + data.reason, 'kol-aa-stopped'); break; }
+          if (data.stopped) { addLog('Stopped: ' + data.reason, 'kol-aa-stopped'); break; }
+        }
+      } catch (outerErr) {
+        addLog('Unexpected error: ' + outerErr.message, 'kol-aa-err');
       }
 
       if (stopRequested) addLog('Stopped by you.', 'kol-aa-stopped');
@@ -843,6 +940,101 @@ async function runAutoAdventureBatchCore(request, url) {
   }
 
   return jsonResponse({ completed, remaining: turnsRequested - completed, stopped, reason, unknownChoice, log });
+}
+
+// ── LOCATION SEARCH (name -> snarfblat, resolved live from the wiki) ───────
+//
+// wiki.kingdomofloathing.com is a MediaWiki instance, so a standard
+// action=opensearch call gives live prefix-matched page titles — the same
+// mechanism MediaWiki's own search-as-you-type box uses. Not verified
+// against a live response from this specific wiki (only inferred from other
+// MediaWiki wikis + the page snippets seen while building this), so if the
+// endpoint turns out to live somewhere other than /api.php, or under a
+// different path, this needs a one-line fix, not a redesign.
+//
+// Each zone's own page renders an infobox with a "Zone Num" row — confirmed
+// on several zone pages (e.g. "The Icy Peak" -> Zone Num 110, "The Enormous
+// Greater-Than Sign" -> Zone Num 226). That number is assumed to be exactly
+// the id adventure.php?snarfblat= expects, since it's the only per-zone
+// numeric id the wiki exposes and existing snarfblat links in the wild match
+// numbers in this range — but this is an assumption, not confirmed against
+// a live snarfblat= link, so double check the first couple of picks.
+const WIKI_API_ORIGIN = "https://wiki.kingdomofloathing.com";
+const LOCATION_SEARCH_CANDIDATES = 12; // ask for more than we need — some hits (items, NPCs, etc.) won't be zones and get filtered out below
+const LOCATION_SEARCH_RESULTS = 5;
+
+function wikiHeaders(request) {
+  const h = new Headers();
+  const ua = request && request.headers.get("User-Agent");
+  if (ua) h.set("User-Agent", ua);
+  return h;
+}
+
+async function fetchWikiOpenSearch(query, request) {
+  const params = new URLSearchParams({
+    action: "opensearch", search: query, namespace: "0",
+    limit: String(LOCATION_SEARCH_CANDIDATES), format: "json",
+  });
+  const res = await fetch(`${WIKI_API_ORIGIN}/api.php?${params.toString()}`, { headers: wikiHeaders(request) });
+  const raw = await res.text();
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    throw new Error(`opensearch didn't return JSON (HTTP ${res.status}): ${raw.slice(0, 200)}`);
+  }
+  const titles = data[1] || [];
+  const urls = data[3] || [];
+  return titles.map((title, i) => ({ title, url: urls[i] })).filter((c) => c.url);
+}
+
+// Tags stripped before matching, rather than matching raw HTML, since the
+// exact infobox markup (table vs divs, intervening links/spans) isn't
+// pinned down — deliberately tolerant of markup, same tradeoff as the
+// KV-seed substring matches elsewhere in this file.
+function extractZoneNum(html) {
+  const text = html.replace(/<[^>]+>/g, " ");
+  const m = text.match(/Zone Num\s+(\d+)/i);
+  return m ? m[1] : null;
+}
+
+async function fetchZoneNum(pageUrl, request) {
+  const res = await fetch(pageUrl, { headers: wikiHeaders(request) });
+  const html = await res.text();
+  return extractZoneNum(html);
+}
+
+async function handleLocationSearch(request, url) {
+  try { return await handleLocationSearchCore(request, url); }
+  catch (err) { return jsonResponse({ error: `unexpected worker error: ${err.message}` }, 500); }
+}
+
+async function handleLocationSearchCore(request, url) {
+  const q = (url.searchParams.get("q") || "").trim();
+  if (!q) return jsonResponse({ query: q, results: [] });
+
+  let candidates;
+  try {
+    candidates = await fetchWikiOpenSearch(q, request);
+  } catch (err) {
+    return jsonResponse({ error: `couldn't search the wiki: ${err.message}` }, 502);
+  }
+  if (!candidates.length) return jsonResponse({ query: q, results: [] });
+
+  const withZones = await Promise.all(
+    candidates.map(async (c) => {
+      let num;
+      try {
+        num = await fetchZoneNum(c.url, request);
+      } catch {
+        return null;
+      }
+      return num ? { name: c.title, snarfblat: num } : null;
+    }),
+  );
+
+  const results = withZones.filter(Boolean).slice(0, LOCATION_SEARCH_RESULTS);
+  return jsonResponse({ query: q, results });
 }
 
 // ── SNAPSHOT DATA (KV SEEDING) ─────────────────────────────────────────────────
@@ -1428,6 +1620,9 @@ export default {
     }
     if (url.pathname === "/spleen") {
       return handleSpleenStatus(request);
+    }
+    if (url.pathname === "/kol-locations/search") {
+      return handleLocationSearch(request, url);
     }
     if (url.pathname === "/kv-seed") {
       return new Response(KV_SEED_HTML, { headers: { "content-type": "text/html;charset=UTF-8" } });
