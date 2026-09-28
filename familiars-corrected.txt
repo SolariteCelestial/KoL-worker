@@ -1,0 +1,323 @@
+1	Mosquito	familiar1
+2	Leprechaun	familiar2
+3	Levitating Potato	familiar3
+4	Angry Goat	familiar4
+5	Sabre-Toothed Lime	familiar5
+6	Fuzzy Dice	familiar6
+7	Spooky Pirate Skeleton	familiar7
+8	Barrrnacle	familiar8
+9	Howling Balloon Monkey	familiar9
+10	Stab Bat	familiar10
+11	Grue	familiar11
+12	Blood-Faced Volleyball	familiar12
+14	Ghuol Whelp	familiar14
+15	Baby Gravy Fairy	familiar15
+16	Cocoabo	familiar16
+17	Star Starfish	familiar17
+18	Hovering Sombrero	hat2
+19	Ghost Pickle on a Stick	familiar19
+20	Killer Bee	familiar20
+21	Whirling Maple Leaf	familiar21
+22	Coffee Pixie	familiar22
+23	Cheshire Bat	familiar23
+24	Jill-O-Lantern	familiar24
+25	Hand Turkey	familiar25
+26	Crimbo Elf	familiar26
+27	Hanukkimbo Dreidl	familiar27
+28	Baby Yeti	familiar28
+29	Feather Boa Constrictor	familiar29
+30	Emo Squid	familiar30
+31	Personal Raincloud	familiar31
+32	Clockwork Grapefruit	familiar32
+33	MagiMechTech MicroMechaMech	familiar33
+34	Flaming Gravy Fairy	familiar34
+35	Frozen Gravy Fairy	familiar35
+36	Stinky Gravy Fairy	familiar36
+37	Spooky Gravy Fairy	sgfairy
+38	Inflatable Dodecapede	familiar38
+39	Pygmy Bugbear Shaman	familiar39
+40	Doppelshifter	familiar40
+41	Attention-Deficit Demon	familiar41
+42	Cymbal-Playing Monkey	familiar42
+43	Temporal Riftlet	familiar43
+44	Sweet Nutcracker	familiar44
+45	Pet Rock	familiar45
+46	Snowy Owl	familiar46
+47	Teddy Bear	familiar47
+48	Ninja Pirate Zombie Robot	npzr
+49	Sleazy Gravy Fairy	slgfairy
+50	Wild Hare	hare
+51	Wind-up Chattering Teeth	chatteeth
+52	Spirit Hobo	ghobo
+53	Astral Badger	badger
+54	Comma Chameleon	commacha
+55	Misshapen Animal Skeleton	animskel
+56	Scary Death Orb	orb
+57	Jitterbug	jitterbug
+58	Nervous Tick	tick
+59	Reassembled Blackbird	blackbird2
+60	Origami Towel Crane	crane1
+61	Ninja Snowflake	snowflake
+62	Evil Teddy Bear	teddybear
+63	Toothsome Rock	pettoothrock
+65	Ancient Yuletide Troll	crimbotroll
+66	Dandy Lion	dandylion
+67	O.A.F.	oaf
+68	Penguin Goodfella	goodfella
+69	Jumpsuited Hound Dog	hounddog
+70	Green Pixie	pictsie
+71	Ragamuffin Imp	ragimp
+72	Exotic Parrot	parrot
+73	Wizard Action Figure	waf
+74	Gluttonous Green Ghost	ggg
+75	Casagnova Gnome	cassagnome
+76	Hunchbacked Minion	hunchback
+77	Crimbo P. R. E. S. S. I. E.	pressiebot
+78	Bulky Buddy Box	wcb
+79	Teddy Borg	teddyborg
+80	RoboGoose	robogoose
+81	El Vibrato Megadrone	megadrone
+82	Mad Hatrack	hatrack
+83	Adorable Seal Larva	seallarva
+84	Untamed Turtle	untamed
+85	Animated Macaroni Duck	macaroniduck
+86	Pet Cheezling	cheezblob
+87	Autonomous Disco Ball	discoball
+88	Mariachi Chihuahua	chihuahua
+89	Hobo Monkey	hobomonkey
+90	Llama Lama	llama
+91	Cotton Candy Carnie	cccarnie
+92	Disembodied Hand	dishand
+93	Black Cat	blackcat
+94	Uniclops	uniclops
+95	Psychedelic Bear	dancebear
+96	Baby Mutant Rattlesnake	rattlesnake
+97	Mutant Fire Ant	fireant
+98	Mutant Cactus Bud	cactusbud
+99	Mutant Gila Monster	gilamonster
+100	Cuddlefish	cuddlefish
+101	Sugar Fruit Fairy	sugarfairy
+102	Imitation Crab	crab
+103	Pair of Ragged Claws	raggedclaws
+104	Magic Dragonfish	dragonfishfam
+105	Frumious Bandersnatch	bandersnatch
+106	Midget Clownfish	midgetclownfish
+107	Syncopated Turtle	syncturtle
+108	Grinning Turtle	grinturtle
+109	Purse Rat	purserat
+110	Wereturtle	turtle
+111	Baby Sandworm	babyworm
+112	Slimeling	slimeling
+113	He-Boulder	heboulder
+114	Rock Lobster	rocklobster
+115	Urchin Urchin	urchin
+116	Grouper Groupie	grouper2
+117	Squamous Gibberer	gibberer
+118	Dancing Frog	dancfrog
+119	Chauvinist Pig	chauvpig
+120	Stocking Mimic	smimic
+121	Snow Angel	snowangel
+122	Jack-in-the-Box	jackinthebox
+123	BRICKO chick	brickochick
+124	Baby Bugged Bugbear	babybugbug
+125	Money-Making Goblin	mmgoblin
+126	Floating Eye	lower_e
+127	Vampire Bat	jubjubbird
+128	Oyster Bunny	hare2
+129	Egg Benedict	egg
+130	Bank Piggy	bankpig
+131	Worm Doctor	larva
+132	Snowhitman	snowhitman
+133	Plastic Grocery Bag	grocbag
+134	Underworld Bonsai	uwbonsai
+135	Rogue Program	tronguy
+136	Mini-Hipster	minihipster
+137	Pottery Barn Owl	sp_owl
+138	Hippo Ballerina	hippo
+139	Knob Goblin Organ Grinder	organgoblin
+140	Piano Cat	pianocat
+141	Dramatic Hedgehog	dramahog
+142	Smiling Rat	smilerat
+143	Robot Reindeer	roboreindeer
+144	Holiday Log	holidaylog
+146	Obtuse Angel	obtuseangel
+147	Reconstituted Crow	blackbird1
+148	Li'l Xenomorph	lilxeno
+149	Dataspider	dataspider
+150	Pair of Stomping Boots	stompboots
+151	Feral Kobold	kobold
+152	Fancypants Scarecrow	pantscrow2
+154	Bloovian Groose	groose
+155	Blavious Kloop	kloop
+156	Peppermint Rhino	pep_rhino
+157	Tickle-Me Emilio	emiliofam
+158	Steam-Powered Cheerleader	cheerleader
+159	Happy Medium	medium_0
+160	Artistic Goth Kid	crayongoth
+161	Flaming Face	flameface
+162	Reagnimated Gnome	frankengnome
+163	Hovering Skull	talkskull
+164	Mini-Skulldozer	minidozer
+165	Angry Jung Man	jungman
+166	Unconscious Collective	uc
+167	Nanorhino	nanorhino
+168	Oily Woim	woim
+169	Homemade Robot	homemadebot
+170	MiniMechaElf	mechaelf
+171	Gelatinous Cubeling	gcube
+172	Adorable Space Buddy	starbuddy
+173	Nosy Nose	nosynose
+174	Mini-Adventurer	miniadv0
+175	Mechanical Songbird	mechbird
+176	Reanimated Reanimator	reanimator
+177	Warbear Drone	wbdronefam
+178	Grimstone Golem	grimgolem
+179	Grim Brother	grimbrother
+180	Miniature Sword & Martini Guy	smguy
+181	Putty Buddy	puttybuddy
+182	Twitching Space Critter	spacebeastlet
+183	Galloping Grill	galgrill
+185	Helix Fossil	foss_amm
+186	Xiblaxian Holo-Companion	holobuddy
+187	Baby Z-Rex	babyzrex
+188	Fist Turkey	fistturkey
+189	Crimbo Shrub	crimboshrub
+190	Mini-Crimbot	minicrimbot
+191	Topiary Skunk	topiskunk
+192	Golden Monkey	goldmonkey
+193	Adventurous Spelunker	spelunker
+194	Sludgepuppy	sludgepuppy
+195	Baby Mayonnaise Wasp	mayowasp
+196	Puck Man	puckman
+197	Ms. Puck Man	mspuckman
+198	Lil' Barrel Mimic	barrelmimic
+199	Machine Elf	machelf
+200	Choctopus	choctopus
+201	Rockin' Robin	rockinrobin
+202	Restless Cow Skull	cowskull
+203	Intergnat	intergnat
+204	Software Bug	softwarebug
+205	Bark Scorpion	barkscorp
+206	Trick-or-Treating Tot	tottot
+207	Chocolate Lab	chocolab
+208	Bad Vibe	lilbadvibe
+209	Space Jellyfish	spacejelly
+210	Optimistic Candle	opticandle
+211	Robortender	robotender
+212	Cute Meteor	cutemeteor
+213	XO Skeleton	xoskeleton
+214	Garbage Fire	dumpsterfire
+215	Globmule	pokefam1
+216	Bluzzard	pokefam2
+217	Faux	pokefam3
+218	Sledgehamster	pokefam4
+219	Pimpsqueak	pokefam5
+220	Pillowbug	pokefam6
+221	Dressage	pokefam7
+222	Sequestrian	pokefam8
+223	Carpricorn	pokefam9
+224	Turpin	pokefam10
+225	Morphan	pokefam11
+226	Cycloney	pokefam12
+227	Peaclock	pokefam13
+228	Turtive	pokefam14
+229	Lepardner	pokefam15
+230	Aiolion	pokefam16
+231	Waifuton	pokefam17
+232	Gorillape	pokefam18
+233	Wendtigo	pokefam19
+234	Snoutlet	pokefam20
+235	Ruffalo	pokefam21
+236	Vaporpoise	pokefam22
+237	Ghosprey	pokefam23
+238	Straypler	pokefam24
+239	Flan	pokefam25
+240	Mustardigrade	pokefam26
+241	Ched	pokefam27
+242	Gazelleton	pokefam28
+243	Mechamelion	pokefam29
+244	Bicycle	pokefam30
+245	Vamprey	pokefam31
+246	Wullabye	pokefam32
+247	Nursine	pokefam33
+248	Cantelope	pokefam34
+249	Ungulant	pokefam35
+250	Caramel	pokefam36
+251	Oppossum	pokefam37
+252	Amanitee	pokefam38
+253	Smashmoth	pokefam39
+254	Vulgure	pokefam40
+255	Squib	pokefam41
+256	Trafikoan	pokefam42
+257	Slotter	pokefam43
+258	Shudder	pokefam44
+259	Glamare	pokefam45
+260	Unspeakachu	pokefam46
+261	Stooper	pokefam47
+262	Disgeist	pokefam48
+263	Bowlet	pokefam49
+264	Cornbeefadon	pokefam50
+265	Mu	pokefam8675309
+266	God Lobster	godlob
+267	Cat Burglar	catburglar
+268	Party Mouse	partymouse
+269	Yule Hound	yulehound
+270	Sausage Golem	saugrindgolem
+271	Elf Operative	elfopelf
+272	Plastic Pirate Skull	pr_rogerskull
+273	Pet Coral	petcoral
+274	Pocket Professor	lilprofessoron
+275	Red-Nosed Snapper	redsnapper
+276	Antique Nutcracker	nutcfigure
+277	Piranha Plant	piranhaplant
+278	Left-Hand Man	lhmlarva
+279	Melodramedary	camelcalf
+280	Ghost of Crimbo Carols	cghost_carols
+281	Ghost of Crimbo Cheer	cghost_cheer
+282	Ghost of Crimbo Commerce	cghost_commerce
+283	Shorter-Order Cook	shortchef
+284	Vampire Vintner	vampvint
+285	Arachnelf	arachnelf
+286	Synthetic Rock	synthrock
+287	Grey Goose	greygoose
+288	Cookbookbat	bbat_fam
+289	Mini-Trainbot	tbot_on
+290	Hobo in Sheep's Clothing	hobosheep
+291	Pixel Rock	pixelrock
+293	Patriotic Eagle	pateagle
+294	Jill-of-All-Trades	darkjill2f
+295	Flaming Leafcutter Ant	al_ant
+296	Rigging Snake	rigsnake
+297	Pet Anchor	anchor
+299	Chest Mimic	mimicchest
+300	Mini Kiwi	kiwi_kiwi
+301	Proto-Protozoa	protoproto
+302	Evolving Organism	bacteria
+303	Burly Bodyguard	bodyguard
+304	Doll Moll	molldoll
+305	Emberiza Aureola	emberbird
+306	Peace Turkey	pto_fam
+307	Quantum Entangler	qf
+308	Golden Pet Rock	ts_goldrock
+310	Profane Parrot	ts_parrot2
+311	Significant Bit	cr_sbit
+312	Heat Wave	heatwave
+313	Cold Cut	coldcut
+314	Shame Spiral	shamespiral
+315	Phantom Limb	phantomlimb
+316	Foul Ball	foulball
+317	Dire Cassava	direcasanim
+318	Observer	observer
+319	Cool Cucumber	coolcuke
+320	Defective Childrens' Stapler	kidstaplerbad
+321	Glover	glover
+322	Zapper Bug	zapperbug
+323	Wet Paper Tiger	wetpapertiger2
+324	Cooler Yeti	cooleryeti
+325	Baby Skeleton	babyskel
+326	Skeleton of Crimbo Past	skeletonocp
+327	Tiny Plastic Santa Claus Skeleton	santaskel
+328	Cute Skeletal Dinosaur	bonedino
+330	Sword of S Words	swordsword
+331	Gross Prophet	prophet
+332	Meat Shield Maiden	msm
