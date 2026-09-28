@@ -7,6 +7,6 @@ Create a secret environment variable named KV_SEED_KEY and mark it as encrypted
 Download the txt files from AV snapshot
 Go to your cloudflare worker at your-worker-name.your-username.workers.dev/kv-seed
 Fill in the password blank with your KV_SEED_KEY
-Upload the txt files and you’re done!
+Upload the txt files (use familiars in here as a replacement for AV snapshot familiars) and you’re done!
 
 Credit to DonCannoli for good ideas, AV snapshot for snapshot code and Anthropic’s Claude for screening.
