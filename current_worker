@@ -836,10 +836,10 @@ async function fetchPwd(cookie, request) {
 
 function extractKolTarget(pastedUrl) {
   const u = new URL(pastedUrl);
-  if (u.hostname.endsWith("kingdomofloathing.com")) return pastedUrl;
-  const m = u.pathname.match(/\/_\/(www\.kingdomofloathing\.com)(\/.*)?/);
-  if (m) return `https://${m[1]}${m[2] || "/"}${u.search}`;
-  return pastedUrl;
+  if (isAllowedHost(u.hostname)) return pastedUrl;
+  const m = u.pathname.match(/^\/_\/([^/]+)(\/.*)?$/);
+  if (m && isAllowedHost(m[1])) return `https://${m[1]}${m[2] || "/"}${u.search}`;
+  throw new Error(`host not allowed: ${u.hostname}`);
 }
 
 function withPwd(targetUrl, pwd) {
@@ -872,7 +872,7 @@ async function runAutoAdventureBatchCore(request, url) {
   if (!rawTarget) return jsonResponse({ error: "missing target adventure URL" }, 400);
   if (!cookie) return jsonResponse({ error: "no session cookie on this request — open /auto-adventure through your logged-in session, not standalone" }, 400);
   let target;
-  try { target = extractKolTarget(rawTarget); } catch { return jsonResponse({ error: `not a valid URL: ${rawTarget}` }, 400); }
+  try { target = extractKolTarget(rawTarget); } catch (err) { return jsonResponse({ error: `rejected target URL (${err.message}): ${rawTarget}` }, 400); }
   let pwd;
   try { pwd = await fetchPwd(cookie, request); } catch (err) { return jsonResponse({ error: `couldn't read a session token: ${err.message}` }, 502); }
 
